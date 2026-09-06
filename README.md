@@ -1,7 +1,7 @@
 # ADELE — project page
 
 Source for the ADELE project page, served with GitHub Pages at
-<https://johannes-weidenfeller.github.io/ADELE>.
+<https://johannes-weidenfeller.github.io/adele>.
 
 Single static file: `index.html` (styles inlined, no build step, no JS).
 
@@ -21,7 +21,7 @@ Single static file: `index.html` (styles inlined, no build step, no JS).
 
     git init && git add -A && git commit -m "ADELE project page"
     git branch -M main
-    git remote add origin git@github.com:johannes-weidenfeller/ADELE.git
+    git remote add origin git@github.com:johannes-weidenfeller/adele.git
     git push -u origin main
 
 Then: repo Settings → Pages → Source = `main`, folder = `/ (root)`.
