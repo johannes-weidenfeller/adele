@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADELE: Adaptive End-to-End Mesh Optimization</title>
+<meta name="description" content="ADELE optimizes meshes end-to-end with an adaptive Delaunay grid and depth-offset rendering, reconstructing detailed geometry in bounded and unbounded scenes.">
+
+<!-- Social preview (fill in once the arXiv id and teaser image exist) -->
+<meta property="og:title" content="ADELE: Adaptive End-to-End Mesh Optimization">
+<meta property="og:description" content="End-to-end mesh reconstruction with an adaptive Delaunay grid and depth-offset rendering.">
+<meta property="og:image" content="static/images/teaser.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#12141a; --muted:#5b6472; --line:#e3e6ec; --bg:#ffffff; --soft:#f6f7f9;
+    --accent:#1f5fd6; --accent-soft:#eef3fd; --maxw:880px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---------- header ---------- */
+  header{padding:72px 0 40px; text-align:center; border-bottom:1px solid var(--line)}
+  h1{
+    font-family:Newsreader,Georgia,serif; font-weight:600;
+    font-size:clamp(30px,5vw,46px); line-height:1.18; letter-spacing:-.01em;
+    margin:0 0 6px;
+  }
+  .venue{
+    display:inline-block; margin:14px 0 22px; padding:5px 14px;
+    background:var(--accent-soft); color:var(--accent);
+    border-radius:99px; font-size:14px; font-weight:600; letter-spacing:.02em;
+  }
+  .authors{font-size:17px; margin:0 0 10px}
+  .authors a{color:var(--ink); border-bottom:1px solid var(--line)}
+  .authors a:hover{color:var(--accent); border-color:var(--accent); text-decoration:none}
+  .authors sup{color:var(--muted); font-size:12px; padding-left:1px}
+  .affil{color:var(--muted); font-size:15px; margin:0}
+  .affil sup{font-size:11px}
+
+  /* ---------- link buttons ---------- */
+  .links{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:30px 0 4px}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:9px 18px; border-radius:99px;
+    background:var(--ink); color:#fff; font-size:15px; font-weight:500;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  .btn:hover{text-decoration:none; opacity:.86; transform:translateY(-1px)}
+  .btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--ink)}
+  .btn.soon{background:var(--soft); color:var(--muted); cursor:default; border:1px dashed var(--line)}
+  .btn.soon:hover{transform:none; opacity:1; text-decoration:none}
+  .btn svg{width:16px; height:16px; fill:currentColor}
+
+  /* ---------- sections ---------- */
+  section{padding:52px 0; border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:none}
+  h2{
+    font-family:Newsreader,Georgia,serif; font-weight:600; font-size:27px;
+    margin:0 0 18px; letter-spacing:-.01em;
+  }
+  p{margin:0 0 16px}
+  .lead{font-size:18px}
+
+  figure{margin:0}
+  figure img,figure video{width:100%; height:auto; display:block; border-radius:10px; border:1px solid var(--line)}
+  figcaption{color:var(--muted); font-size:14.5px; margin-top:12px; line-height:1.55}
+  .placeholder{
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    min-height:260px; padding:28px; border:1px dashed #cfd5df; border-radius:10px;
+    background:var(--soft); color:var(--muted); font-size:15px;
+  }
+  .teaser{padding:36px 0 0; border-bottom:none}
+
+  /* ---------- bibtex ---------- */
+  pre{
+    background:var(--soft); border:1px solid var(--line); border-radius:10px;
+    padding:18px 20px; overflow-x:auto; font-size:13.5px; line-height:1.6;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color:#2b303b; margin:0;
+  }
+
+  footer{padding:34px 0 60px; color:var(--muted); font-size:14px; text-align:center}
+  footer a{color:var(--muted); text-decoration:underline}
+
+  @media (max-width:640px){
+    body{font-size:16px}
+    header{padding:52px 0 32px}
+    section{padding:40px 0}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>ADELE: Adaptive End-to-End Mesh Optimization</h1>
+    <div class="venue">Preprint &middot; 2026</div>
+
+    <p class="authors">
+      <a href="https://vlg.inf.ethz.ch/team/Johannes-Weidenfeller.html">Johannes Weidenfeller</a><sup>1</sup>,&nbsp;
+      <a href="https://taconite.github.io">Shaofei Wang</a><sup>2</sup>,&nbsp;
+      <a href="https://health.dsi.uzh.ch/member/philipp-furnsthal/">Philipp F&uuml;rnstahl</a><sup>3</sup>,&nbsp;
+      <a href="https://vlg.inf.ethz.ch/team/Prof-Dr-Siyu-Tang.html">Siyu Tang</a><sup>1</sup>
+    </p>
+    <p class="affil">
+      <sup>1</sup>ETH Zurich &nbsp;&middot;&nbsp;
+      <sup>2</sup>Beijing Institute for General Artificial Intelligence &nbsp;&middot;&nbsp;
+      <sup>3</sup>University of Zurich
+    </p>
+
+    <div class="links">
+      <!-- TODO: swap href once the arXiv id is assigned -->
+      <a class="btn" href="#">
+        <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8V12zm0 4h8v1.5H8V16z"/></svg>
+        Paper
+      </a>
+      <a class="btn ghost" href="#">
+        <svg viewBox="0 0 24 24"><path d="M3 4h18v2H3V4zm0 5h18v11H3V9zm2 2v7h14v-7H5z"/></svg>
+        arXiv
+      </a>
+      <span class="btn soon">
+        <svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+        Code coming soon
+      </span>
+    </div>
+  </div>
+</header>
+
+<section class="teaser">
+  <div class="wrap">
+    <figure>
+      <!-- Drop the teaser at static/images/teaser.jpg and replace this block with:
+           <img src="static/images/teaser.jpg" alt="ADELE reconstruction results"> -->
+      <div class="placeholder">Teaser figure &mdash; save it as <code>&nbsp;static/images/teaser.jpg&nbsp;</code></div>
+      <figcaption>
+        <strong>ADELE reconstructs meshes directly.</strong> Instead of extracting a surface from a radiance
+        field as a post-process, ADELE optimizes an adaptive Delaunay-triangulated mesh end-to-end, yielding
+        detailed geometry with compact triangle budgets &mdash; in object-centric and unbounded scenes alike.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Abstract</h2>
+    <p class="lead">
+      Meshes remain the most practical representation for geometry reasoning and integration into graphics
+      pipelines, yet existing reconstruction methods struggle to produce high-quality results. Most
+      state-of-the-art approaches leverage radiance fields (NeRF/3DGS) and treat mesh extraction as a
+      post-processing step, which often leads to either oversmoothed surfaces or excessive triangle counts.
+      Existing end-to-end mesh optimization methods alleviate some of these issues but suffer from poor
+      scalability and an unstable optimization process. The former limits the application scope to
+      small-scale, object-centric scenes, while the latter leads to overall inferior reconstruction quality
+      compared to radiance-field-based approaches.
+    </p>
+    <p>
+      In this paper, we introduce an adaptive, end-to-end mesh optimization framework and a novel mesh
+      rendering technique to address these challenges, respectively. Our representation combines a
+      Delaunay-triangulated grid with a multi-resolution hash encoding, initialized from VGGT depth maps and
+      refined through point pruning and insertion. A depth-offset rendering formulation improves optimization
+      stability and reduces geometric artifacts. Our method significantly outperforms existing end-to-end
+      mesh optimization approaches on DTU and Tanks and Temples while remaining competitive with
+      radiance-field-based methods. We also show that, for the first time, native mesh representations can
+      effectively reconstruct detailed geometry in unbounded scenes from the Tanks and Temples dataset.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Method</h2>
+    <figure>
+      <div class="placeholder">Pipeline figure &mdash; save it as <code>&nbsp;static/images/method.jpg&nbsp;</code></div>
+      <figcaption>
+        A Delaunay-triangulated grid carries a multi-resolution hash encoding, is initialized from VGGT depth
+        maps, and is refined by point pruning and insertion during optimization. Depth-offset rendering
+        stabilizes the gradients that drive the surface.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Results</h2>
+    <figure>
+      <div class="placeholder">Qualitative comparisons &mdash; <code>&nbsp;static/images/results.jpg&nbsp;</code></div>
+      <figcaption>
+        Comparisons on DTU and Tanks and Temples against end-to-end mesh optimization and
+        radiance-field-based baselines.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>BibTeX</h2>
+<pre>@article{weidenfeller2026adele,
+  title   = {ADELE: Adaptive End-to-End Mesh Optimization},
+  author  = {Weidenfeller, Johannes and Wang, Shaofei and
+             F{\"u}rnstahl, Philipp and Tang, Siyu},
+  journal = {arXiv preprint arXiv:XXXX.XXXXX},
+  year    = {2026}
+}</pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Website template adapted for ADELE. Page source on
+    <a href="https://github.com/johannes-weidenfeller/ADELE-pages">GitHub</a>.
+  </div>
+</footer>
+
+</body>
+</html>
