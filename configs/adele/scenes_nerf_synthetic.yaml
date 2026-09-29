@@ -1,0 +1,12 @@
+# Per-scene bounding radius for NeRF-synthetic (ADELE, nerf_synthetic.yaml). Not loaded by
+# launch.py; pass it on the command line:
+#   --train dataset.scene=lego model.radius=1.2
+radius:
+  chair:     1.1
+  drums:     1.2
+  ficus:     1.2
+  hotdog:    1.5
+  lego:      1.2
+  materials: 1.2
+  mic:       1.3
+  ship:      1.5

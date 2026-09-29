@@ -1,6 +1,7 @@
 MIT License
 
-Copyright (c) 2026 Johannes Weidenfeller
+Copyright (c) 2026 Johannes Weidenfeller, Shaofei Wang, Philipp Fürnstahl, Siyu Tang (ETH Zurich)
+Copyright (c) 2022 Yuanchen Guo (instant-nsr-pl, on which this codebase is built)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +20,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---------------------------------------------------------------------------
+IMPORTANT: this repository also contains third-party components that are NOT
+under the MIT license. In particular the differentiable mesh renderer under
+render/ and geometry/dmtet.py (NVIDIA Source Code License, non-commercial use
+only) and systems/loss_utils.py (Inria/MPII Gaussian-Splatting License,
+research use only) are on the training path. As a consequence the software
+as a whole may only be used for non-commercial research and evaluation
+purposes. See THIRD_PARTY_NOTICES.md for the full list and license texts.

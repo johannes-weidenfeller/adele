@@ -1,0 +1,302 @@
+# ADELE on DTU, memory-efficient variant: 1 image per micro-batch with
+# gradient accumulation over 4 micro-batches (dtu.yaml uses 4 images x 4).
+# python launch.py --config configs/adele/dtu_24gb.yaml --gpu 0 --train dataset.scene=scan24
+
+name: radtets-${basename:${dataset.root_dir}}
+tag: ""
+seed: 42
+
+dataset:
+  name: colmap
+  scene: ???                       # e.g. scan24  (CLI: dataset.scene=scan24)
+  root_dir: ./load/dtu/${dataset.scene}
+  img_downscale: 2                 # 1554x1162 -> 777x581
+  normalize_cameras: true
+  up_est_method: camera
+  center_est_method: lookat
+  n_test_traj_steps: 120
+  mask_method: "alpha"             # foreground mask from the PNG alpha channel
+  load_data_on_gpu: true
+
+model:
+  name: radtets
+  radius: 0.6
+  offset: [0.0, 0.0, 0.0]
+  contraction_type: 'aabb'
+  train_num_rays: 256
+  num_samples_per_ray: 1280
+  grid_prune: true
+  grid_prune_occ_thre: 0.001
+  train_num_images: 1   # images per micro-batch (x trainer.accumulate_grad_batches per optimizer step)
+  max_train_num_rays: 8192
+  dynamic_ray_sampling: true
+  batch_image_sampling: true
+  randomized: true
+  cos_anneal_end: 10000
+  variance_scaling: false
+
+  # Mesh rendering
+  mesh_offset_sampling:
+    num_samples: [6000, 3, 3, 8000]
+    stochastic: true
+    vary_sample_number: true
+    use_normal_samples: false
+    cosine_scaling: true
+    cos_min_clamp: 0.5
+
+  features:
+    sdf:
+      storage: hashgrid
+      dim: 1
+    appearance_params:
+      storage: hashgrid
+      dim: 12
+    variance:
+      storage: global
+      dim: 1
+      init:
+        type: constant
+        args:
+          value: 3.0
+
+  # SDF model
+  sdf:
+    input_parameters:
+      - sdf
+    model:
+      name: simple-sdf
+      scale: ${model.radius}
+
+  # Densification and pruning
+  grid_manager:
+    triangulate_until: 4200
+    densification:
+      schedule: [2000, 4000, 200]
+      factor: 1.5
+      gradient_heuristic: true
+    num_final_points: 1000000
+    pruning:
+      visibility:
+        schedule: [0, 5000, 2500]
+        num_neighbors: 1
+      mesh_contribution:
+        schedule: [2000, 5000, 1000]
+        num_neighbors: 2
+
+  # Background
+  background:
+    learned: false
+    default_color: white
+    model:
+      name: hashgrid
+      radius: 0.5
+      feature_dim: 3
+      offset: [0.5, 0.5]
+      contraction_type: aabb
+      grad_type: analytic
+      input_dim: 2
+      xyz_encoding_config:
+        otype: HashGrid
+        n_levels: 12
+        n_features_per_level: 2
+        log2_hashmap_size: 19
+        base_resolution: 16
+        per_level_scale: 1.3195079107728942
+        include_xyz: true
+        start_level: 4
+        start_step: 0
+        update_steps: 1000
+      mlp_network_config:
+        otype: VanillaMLP
+        activation: ReLU
+        output_activation: sigmoid
+        n_neurons: 64
+        n_hidden_layers: 1
+        sphere_init: false
+        sphere_init_radius: 0.5
+        scale_factor: 1.0
+        weight_norm: true
+
+  # Variance model
+  variance:
+    input_parameters:
+      - {variance: val}
+    model:
+      name: "modulated-variance"
+      modulate_start: 2000
+      modulate_end: 4500
+      max_inv_s: 10000.0
+      scaling: false
+      scale_factor: ${model.radius}
+
+  # Appearance model
+  appearance:
+    input_parameters:
+      - appearance_params
+
+    model:
+      name: volume-radiance
+      shading_model: world_coordinates
+      predict_tangents: false
+      input_feature_dim: ${add:${model.features.appearance_params.dim},1}
+      input_dirs: true
+      input_normals: true
+      input_refl_dirs: false
+      encode_normals: true
+      encode_dirs: false
+      encode_refl_dirs: false
+      refl_dir_encoding_config:
+        otype: SphericalHarmonics
+        degree: 4
+      dir_encoding_config:
+        otype: SphericalHarmonics
+        degree: 4
+      normal_encoding_config:
+        otype: SphericalHarmonics
+        degree: 4
+      mlp_network_config:
+        otype: VanillaMLP
+        activation: ReLU
+        output_activation: none
+        n_neurons: 64
+        n_hidden_layers: 2
+      color_activation: sigmoid
+      reflect_view_dirs: true
+
+  # Normal model
+  normals:
+    store_on_hashgrid: true
+    grad_type: analytic
+    interpolate: false
+    use_tetrahedra_normals: false
+    normal_map: false
+    smooth_mesh_normals: false
+
+  normal_map:
+    store_on_hashgrid: true
+    initialization: uniform
+    interpolate: false
+
+  # Tetrahedral grid
+  grid:
+    scale: ${model.radius}
+    offset: ${model.offset}
+    contraction_type: ${model.contraction_type}
+    point_initialization: random
+    grid_resolution: 128
+    num_init_points: 250000
+
+  # Hashgrid
+  hashgrid:
+    radius: ${model.radius}
+    offset: ${model.offset}
+    contraction_type: ${model.contraction_type}
+    grad_type: analytic
+    xyz_encoding_config:
+      otype: HashGrid
+      n_levels: 16
+      n_features_per_level: 2
+      log2_hashmap_size: 19
+      base_resolution: 32
+      per_level_scale: 1.3195079107728942
+      include_xyz: true
+      start_level: 4
+      start_step: 0
+      update_steps: 1000
+    mlp_network_config:
+      otype: VanillaMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 1
+      sphere_init: true
+      sphere_init_radius: 0.5
+      weight_norm: true
+
+
+system:
+  name: radtets-system
+  train_background_color: random
+  val_background_color: white
+  lambda_volumetric: [1000,0.5,0.0,3000]
+  lambda_mesh: [1000,0.5,1.0,3000]
+  validation_ray_chunk: 16384
+  validate_mesh: true
+  validate_volumetric: true
+  reg_loss:
+    lambda_sdf: 0.0
+    lambda_light: 0.0
+  volumetric_loss:
+    lambda_rgb_mse: 0.
+    lambda_rgb_l1: 10.
+    lambda_mask_bce: 0.0
+    lambda_mask_mse: 1.0
+    lambda_eikonal: 0.1
+    lambda_curvature: 0.
+    lambda_sparsity: 0.0
+    lambda_distortion: 0.0
+    lambda_distortion_bg: 0.0
+    lambda_opaque: 0.0
+    lambda_normal_smoothness: 0.0
+    sparsity_scale: 1.0
+  mesh_loss:
+    lambda_rgb_mse: 0.
+    lambda_rgb_l1: 10.
+    lambda_rgb_grad_l1: 0.
+    lambda_mask_bce: 0.0
+    lambda_mask_mse: 1.0
+    lambda_albedo: 0.0
+    lambda_eikonal: 0.0
+    lambda_angles: [3000,0.0,0.0,5000]
+    lambda_normal_smoothness: 0.0
+
+  optimizer:
+    name: AdamW
+    args:
+      lr: 0.01
+      betas: [0.9, 0.99]
+      eps: 1.e-15
+    params:
+      hashgrid:
+        lr: 0.01
+      appearance_model:
+        lr : 0.01
+      tetrahedral_grid.primal_points:
+        lr: 0.0001
+      variance:
+        lr: 0.01
+  warmup_steps: 500
+  scheduler:
+    name: SequentialLR
+    interval: step
+    milestones:
+      - ${system.warmup_steps}
+    schedulers:
+      - name: LinearLR # linear warm-up in the first system.warmup_steps steps
+        args:
+          start_factor: 0.01
+          end_factor: 1.0
+          total_iters: ${system.warmup_steps}
+      - name: ExponentialLR
+        args:
+          gamma: ${calc_exp_lr_decay_rate:0.25,${sub:5000,${system.warmup_steps}}}
+
+checkpoint:
+  save_top_k: -1
+  every_n_train_steps: ${trainer.max_steps}
+
+export:
+  chunk_size: 2097152
+  export_vertex_color: True
+
+trainer:
+  max_steps: 4500
+  log_every_n_steps: 100
+  num_sanity_val_steps: 1
+  val_check_interval: 500
+  limit_train_batches: 1.0
+  limit_val_batches: 2
+  precision: 16
+  gradient_clip_val: 0.0
+  gradient_clip_algorithm: norm
+  accumulate_grad_batches: 4
